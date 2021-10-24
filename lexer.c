@@ -32,6 +32,7 @@ lexer_t lexer_create(const char *buffer)
 			case '#': e.type = TOKEN_HASH  ; e.len = 1 ; break ;
 			case ':': e.type = TOKEN_COLON ; e.len = 1 ; break ;
 
+			// FIXME: this number thing is not working for some reason
 			case '-':
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
@@ -40,12 +41,17 @@ lexer_t lexer_create(const char *buffer)
 				  e.len = i ;
 				  while(i < l.buff_len)
 				  {
-					  if(strchr("0123456789", l.buffer[i]) == NULL)
-						  break ;
-					  i++ ;
+					  if(strchr("0123456789", l.buffer[i]))
+					  {
+						  i++ ;
+						  continue ;
+					  }
+					  break ;
 				  }
 				  e.len = i - e.len ;
+				  i-- ;
 				  break ;
+
 			case '"':
 				  e.type = TOKEN_STRING ;
 				  e.len = i ;
@@ -64,10 +70,9 @@ lexer_t lexer_create(const char *buffer)
 				  e.len = i ;
 				  while(i < l.buff_len)
 				  {
-					  if(strchr(" \t\n", l.buffer[i]) == NULL)
-						  i++ ;
-					  else
+					  if(strchr(" \t\n()#:\"'", l.buffer[i]))
 						  break ;
+					  i++ ;
 				  }
 				  e.len = i - e.len ;
 				  i-- ;
@@ -90,10 +95,12 @@ void lexer_delete(lexer_t *l)
 
 element_t lexer_advance(lexer_t *l) 
 {
-	if(l->current > l->list_len)
+	if(l->current >= l->list_len)
 		return (element_t){TOKEN_EOF, 0, 0} ;
 
-	return l->list[l->current++] ;
+	element_t e = l->list[l->current] ;
+	l->current++ ;
+	return e ;
 }
 
 void lexer_reset(lexer_t *l) 

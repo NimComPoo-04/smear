@@ -2,19 +2,23 @@
 #define _PARSER_H_
 
 #include "lexer.h"
-#include "list.h"
 
 typedef struct node_t
 {
-	element_t value ;
-	list_t *sub_node ;
-} node_t ;
+	element_t value ; // very cool
+	struct node_t *first ; // sub node first
+	struct node_t *last ; // sub node second
+	struct node_t *next ; // the next subnode
+} node_t;
 
-node_t *parser_create_node(element_t e) ;
-void parser_attach_node(node_t *n, element_t e) ;
-void parser_delete_node(node_t *n) ;
+node_t *node_create(element_t value) ;
+void node_attach_child(node_t *n, node_t *x) ;
+void node_attach_next(node_t *n, node_t *x) ;
+void node_delete(node_t *n) ;
 
-node_t *parser_create(lexer_t *l) ;
-void parser_delete(lexer_t *l) ;
+node_t *parse(lexer_t *l) ;
+node_t *parse_list(lexer_t *l) ;
+
+void parser_debug_prnt(node_t *n, int x) ;
 
 #endif
