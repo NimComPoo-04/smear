@@ -63,6 +63,7 @@ void node_attach_child(node_t *n, node_t *x)
 		n->last->next = x ;
 		n->last = x ;
 	}
+	n->len_sub_nodes++ ;
 }
 
 void node_attach_next(node_t *n, node_t *x)
