@@ -3,112 +3,176 @@
 #include <stdint.h>
 #include "vm.h"
 
-vm_t vm_create(size_t mem)
+vm_t vm_create()
 {
-	vm_t x = {0} ;
-	x.SP = mem ;
-	x.mem = calloc(mem, sizeof(uint8_t)) ;
-	return x ;
+	vm_t v = {0} ;
+
+	v.A = 0 ;
+	v.X = 0 ;
+	v.Y = 0 ;
+
+	v.SP = MEMCAP ;
+	v.IP = 0 ;
+	v.PS = 0 ;
+
+	v.mem = calloc(sizeof(uint8_t), MEMCAP) ;
+
+	return v ;
 }
 
-static void pic(vm_t *m)
+static uint32_t tou(uint8_t *m)
 {
-	uint32_t oi = m->X ;
-	switch(oi)
+	return m[0] | (m[1] << 8) | (m[2] << 16) | (m[3] << 24) ;
+}
+
+static void toarr(uint32_t x, uint8_t *m)
+{
+	m[0] = (x >> 8 * 0) & 0xFF ;
+	m[1] = (x >> 8 * 1) & 0xFF ;
+	m[2] = (x >> 8 * 2) & 0xFF ;
+	m[3] = (x >> 8 * 3) & 0xFF ;
+}
+
+void vm_step(vm_t *v)
+{
+	uint8_t opcode = v->mem[v->IP] ;
+
+	switch(opcode >> 2)
 	{
-		case PIC_PRINT: printf("%s", &m->mem[m->I]) ; break ;
-		default:
-			printf("<-- Not implemented -->") ;
-	}
-}
+		case VM_LDA: 
+			if((opcode & 3) == 0) 
+				v->A = tou(&v->mem[v->IP+1]);
+			else if((opcode & 3) == 1)
+				v->A = v->mem[tou(&v->mem[v->IP+1])];
+			v->IP+=4;
+			break;
 
-static uint32_t tou32(uint8_t *buff) 
-{
-	return (buff[3] << 24) | (buff[2] << 16) | (buff[1] << 8) | buff[0] ;
-}
+		case VM_LDX: 
+			if((opcode & 3) == 0) 
+				v->X = tou(&v->mem[v->IP+1]);
+			else if((opcode & 3) == 1)
+				v->X = v->mem[tou(&v->mem[v->IP+1])];
+			v->IP+=4;
+			break;
 
-static void toarr(uint32_t x, uint8_t *buff)
-{
-	buff[3] = (x >> 24) & 0xFF ;
-	buff[2] = (x >> 16) & 0xFF ;
-	buff[1] = (x >> 8) & 0xFF ;
-	buff[0] = (x >> 0) & 0xFF ;
-}
+		case VM_LDY: 
+			if((opcode & 3) == 0) 
+				v->Y = tou(&v->mem[v->IP+1]);
+			else if((opcode & 3) == 1)
+				v->Y = v->mem[tou(&v->mem[v->IP+1])];
+			v->IP+=4;
+			break;
 
-void vm_step(vm_t *m)
-{
-	uint8_t opcode = m->mem[m->IP] ;
+		case VM_STA: toarr(v->A, &v->mem[tou(&v->mem[v->IP+1])]); v->IP+=4; break;
+		case VM_STX: toarr(v->X, &v->mem[tou(&v->mem[v->IP+1])]); v->IP+=4; break;
+		case VM_STY: toarr(v->Y, &v->mem[tou(&v->mem[v->IP+1])]); v->IP+=4; break;
 
-	switch(opcode)
-	{
-		case VM_NOP: m->IP++; break ;
-		case VM_HALT: return ;
-		case VM_INT: pic(m) ; m->IP++; break ;
+		case VM_TAX: v->A = v->X; break;
+		case VM_TAY: v->A = v->Y; break;
+		case VM_TXA: v->X = v->A; break;
+		case VM_TYA: v->Y = v->A; break;
 
-		case VM_ADD: m->A = m->X + m->Y; m->IP++; break ;
-		case VM_SUB: m->A = m->X - m->Y; m->IP++; break ;
-		case VM_MUL: m->A = m->X * m->Y; m->IP++; break ;
-		case VM_DIV: m->A = m->X / m->Y; m->Y = m->X % m->Y; m->IP++; break ;
-		case VM_AND: m->A = m->X & m->Y; m->IP++; break ;
-		case VM_OR : m->A = m->X | m->Y; m->IP++; break ;
-		case VM_XOR: m->A = m->X ^ m->Y; m->IP++; break ;
-		case VM_NOT: m->A = ~m->X; m->IP++; break ;
-		case VM_SHL: m->A = m->X << m->Y; m->IP++; break ;
-		case VM_SHR: m->A = m->X >> m->Y; m->IP++; break ;
+		case VM_ADD: v->A = v->X + v->Y; break;
+		case VM_SUB: v->A = v->X - v->Y; break;
+		case VM_SHL: v->A = v->X << v->Y; break;
+		case VM_SHR: v->A = v->X >> v->Y; break;
 
-		case VM_CMP: m->PS = 0 ;
-			     if(m->X < m->Y) m->PS |= 1 ; 
-			     if(m->X > m->Y) m->PS |= 2 ; 
-			     if(m->X == m->Y) m->PS |= 4 ; 
-			     if(m->X == 0) m->PS |= 8 ; 
-			     m->IP++ ;
+		case VM_CMP:
+			     v->PS = 0 ;
+			     if(v->X < v->Y) v->PS |= 8 ;
+			     if(v->X > v->Y) v->PS |= 4 ;
+			     if(v->X == v->Y) v->PS |= 2 ;
+			     if(v->X == 0) v->PS |= 1 ;
 			     break ;
 
-		case VM_JMP: m->IP = m->I; break ;
-		case VM_JLT: if(m->PS & 1) m->IP = m->I; break ;
-		case VM_JGT: if(m->PS & 2) m->IP = m->I; break ;
-		case VM_JEQ: if(m->PS & 4) m->IP = m->I; break ;
-		case VM_JZE: if(m->PS & 8) m->IP = m->I; break ;
+		case VM_JMP: v->IP = tou(&v->mem[v->IP+1]); return;
+		case VM_JLT: if(((v->PS & 8) >> 3) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
+		case VM_JGT: if(((v->PS & 4) >> 2) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
+		case VM_JEQ: if(((v->PS & 2) >> 1) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
+		case VM_JZE: if(((v->PS & 1) >> 0) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
 
-		case VM_LDA: m->A = tou32(&m->mem[m->IP+1]); m->IP+=5; break ;
-		case VM_LDX: m->X = tou32(&m->mem[m->IP+1]); m->IP+=5; break ;
-		case VM_LDY: m->Y = tou32(&m->mem[m->IP+1]); m->IP+=5; break ;
-		case VM_LDI: m->I = tou32(&m->mem[m->IP+1]); m->IP+=5; break ;
+		case VM_JSR:
+			toarr(v->IP, &v->mem[v->SP-4]) ;
+			v->SP -= 4 ;
+			v->IP = tou(&v->mem[v->IP+1]) ;
+			return ;
 
-		case VM_STA: toarr(m->A, &m->mem[m->I]); m->IP++; break ;
-		case VM_STX: toarr(m->X, &m->mem[m->I]); m->IP++; break ;
-		case VM_STY: toarr(m->Y, &m->mem[m->I]); m->IP++; break ;
+		case VM_RET:
+			v->IP = tou(&v->mem[v->SP]) ;
+			v->SP += 4 ;
+			return ;
 
-		case VM_TAS: m->SP = m->A ; m->IP++; break ;
-		case VM_TAI: m->I = m->A ; m->IP++; break ;
-		case VM_TSA: m->A = m->SP ; m->IP++; break ;
-		case VM_TIA: m->A = m->I ; m->IP++; break ;
+		case VM_PUSH:
+			if((opcode & 3) == 0)
+			{
+				toarr(tou(&v->mem[v->IP+1]), &v->mem[v->SP-4]) ;
+				v->IP += 4 ;
+				v->SP -= 4 ;
+			}
+			else if((opcode & 3) == 1)
+			{
+				toarr(v->A, &v->mem[v->SP-4]) ;
+				v->SP -= 4 ;
+			}
+			else if((opcode & 3) == 2)
+			{
+				toarr(v->X, &v->mem[v->SP-4]) ;
+				v->SP -= 4 ;
+			}
+			else if((opcode & 3) == 3)
+			{
+				toarr(v->Y, &v->mem[v->SP-4]) ;
+				v->SP -= 4 ;
+			}
+			break;
 
-		case VM_MOV: m->A = tou32(&m->mem[m->I]); m->IP++; break ;
+		case VM_POP:
+			if((opcode & 3) == 0)
+			{
+				v->A = tou(&v->mem[v->SP]) ;
+				v->SP+=4 ;
+			}
+			else if((opcode & 3) == 1)
+			{
+				v->X = tou(&v->mem[v->SP]) ;
+				v->SP+=4 ;
+			}
+			else if((opcode & 3) == 2)
+			{
+				v->Y = tou(&v->mem[v->SP]) ;
+				v->SP+=4 ;
+			}
+			else if((opcode & 3) == 3)
+			{
+				v->IP = tou(&v->mem[v->SP]) ;
+				v->SP+=4 ;
+			}
 
-		case VM_PUSH: toarr(m->A, &m->mem[m->SP-4]); m->SP-=4; break;
-		case VM_POP:  m->A = tou32(&m->mem[m->SP]); m->SP+=4; break;
+			break;
 
-		default: printf("<-- Not Implemented -->\n") ;
+		case VM_INT:
+			printf("<-- Not Implemented -->\n") ;
+			break;
+		case VM_HALT: /* do nothing ;-) */return ;
+
+		default:
+			printf("<-- Wront Opcode -->\n") ;
+	}
+
+	v->IP++ ;
+}
+
+void vm_log(vm_t *v)
+{
+	printf("%d\t%d\t%d\n", v->A, v->X, v->Y) ;
+	printf("%d\t%d\n\n", v->SP, v->IP) ;
+	for(uint32_t i = v->SP; i < MEMCAP; i++)
+	{
+		printf("%d\t%d\n", i, v->mem[i]) ;
 	}
 }
 
-void vm_log(vm_t *m)
+void vm_delete(vm_t *v)
 {
-	printf("A: %d\n", m->A) ;
-	printf("X: %d\n", m->X) ;
-	printf("Y: %d\n", m->Y) ;
-	printf("I: %d\n\n", m->I) ;
-
-	printf("SP: %d\n", m->SP) ;
-	printf("IP: %d\n", m->IP) ;
-	printf("PS: %d\n\n", m->PS) ;
-
-	printf(":: %d ::\n", m->mem[m->IP]) ;
-	printf(":: %d ::\n\n", m->mem[m->SP]) ;
-}
-
-void vm_delete(vm_t *m)
-{
-	free(m->mem) ;
+	free(v->mem) ;
 }

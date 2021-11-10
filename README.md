@@ -6,23 +6,12 @@ Lists:
 
 (10 11 12) -> this is a list and its fine
 
-Lets stop the goble de goo and do this holy smokes
+hash map to store symbols.
+list to show execution cycles.
 
-[
-	SP <- stack pointer
-]
+(define x 10)
 
-PUSH u32
-POP u32
-INT
-
-example of small program with this bsery
-
-(+ 1 2 3)
-
-PUSH 1
-PUSH 2
-PUSH 3
-PUSH 3
-PUSH 1
-INT
+("+" -> add)
+("-" -> sub)
+("*" -> mul)
+("/" -> div)
