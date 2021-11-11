@@ -1,10 +1,25 @@
 #ifndef _ASM_H_
 #define _ASM_H_
 
-#include <stdio.h>
 #include <stdint.h>
 
-uint8_t *assemble(FILE *f) ;
-void disassemble(const uint8_t *val) ;
+#include "vm.h"
+#include "parser.h"
+
+typedef struct
+{
+	uint8_t *value ;
+	uint32_t len ;
+} asm_t ;
+
+asm_t asm_create(void) ;
+void asm_add(asm_t *a, uint8_t x) ;
+void asm_rem(asm_t *a) ;
+void asm_delete(asm_t *a) ;
+
+asm_t assemble(node_t *n) ;
+void disassemble(vm_t *m) ;
+
+void asm_lst(asm_t *x, node_t *n) ;
 
 #endif

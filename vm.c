@@ -33,6 +33,49 @@ static void toarr(uint32_t x, uint8_t *m)
 	m[3] = (x >> 8 * 3) & 0xFF ;
 }
 
+static void interupt_controler(vm_t *m)
+{
+	uint32_t sp = m->SP;
+	switch(m->X)
+	{
+		case IC_ADD:
+			for(uint32_t i = 0; i < m->Y; i++)
+			{
+				m->A = tou(&m->mem[sp]) + m->A ;
+				sp = sp + 4 ;
+			}
+			break ;
+
+		case IC_MUL:
+			for(uint32_t i = 0; i < m->Y; i++)
+			{
+				m->A = tou(&m->mem[sp]) * m->A ;
+				sp = sp + 4 ;
+			}
+			break ;
+
+		case IC_SUB:
+			for(uint32_t i = 0; i < m->Y-1; i++)
+			{
+				m->A = tou(&m->mem[sp]) + m->A ;
+				sp = sp + 4 ;
+			}
+			m->A = tou(&m->mem[sp]) - m->A; 
+			break ;
+
+		case IC_DIV:
+			for(uint32_t i = 0; i < m->Y-1; i++)
+			{
+				m->A = tou(&m->mem[sp]) * m->A ;
+				sp = sp + 4 ;
+			}
+			m->A = tou(&m->mem[sp]) / m->A; 
+			break ;
+
+		default: printf("<-- Wrong Intrupt -->") ;
+	}
+}
+
 void vm_step(vm_t *v)
 {
 	uint8_t opcode = v->mem[v->IP] ;
@@ -72,8 +115,25 @@ void vm_step(vm_t *v)
 		case VM_TXA: v->X = v->A; break;
 		case VM_TYA: v->Y = v->A; break;
 
-		case VM_ADD: v->A = v->X + v->Y; break;
-		case VM_SUB: v->A = v->X - v->Y; break;
+		case VM_TSA: v->SP = v->A; break;
+		case VM_TIA: v->IP = v->A; break;
+		case VM_TAS: v->A = v->SP; break;
+		case VM_TAI: v->A = v->IP; break;
+
+		case VM_ADD:
+			if((opcode & 3) == 0)
+				v->A = v->X + v->Y;
+			else if((opcode & 3) == 1)
+				v->SP += v->X ;
+			break;
+
+		case VM_SUB:
+			if((opcode & 3) == 0)
+				v->A = v->X - v->Y;
+			else if((opcode & 3) == 1)
+				v->SP -= v->X ;
+			break ;
+
 		case VM_SHL: v->A = v->X << v->Y; break;
 		case VM_SHR: v->A = v->X >> v->Y; break;
 
@@ -151,12 +211,12 @@ void vm_step(vm_t *v)
 			break;
 
 		case VM_INT:
-			printf("<-- Not Implemented -->\n") ;
+			interupt_controler(v) ;
 			break;
+
 		case VM_HALT: /* do nothing ;-) */return ;
 
-		default:
-			printf("<-- Wront Opcode -->\n") ;
+		default: printf("<-- Wront Opcode -->\n") ;
 	}
 
 	v->IP++ ;

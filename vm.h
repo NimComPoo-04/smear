@@ -3,7 +3,17 @@
 
 #include <stdint.h>
 
-#define MEMCAP (64)
+#define MEMCAP (1024)
+
+enum
+{
+	IC_ADD,
+	IC_SUB,
+	IC_MUL,
+	IC_DIV,
+	IC_MOD,
+	IC_ERROR
+} ;
 
 enum
 {
@@ -17,8 +27,12 @@ enum
 	
 	VM_TAX, // transfer A to X
 	VM_TAY,
+	VM_TAS,
+	VM_TAI,
 	VM_TXA,
 	VM_TYA,
+	VM_TSA,
+	VM_TIA,
 
 	VM_ADD, // add x, y to a
 	VM_SUB,

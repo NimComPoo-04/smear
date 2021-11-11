@@ -1,26 +1,29 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "parser.h"
 #include "lexer.h"
 #include "vm.h"
+#include "asm.h"
 
 int main(void)
 {
-	/*
-	char prog[] = "10 20 (* 10 10 (+ 32 78))" ;
+	char prog[] = "(+ 1 2 (* 11 10 1))" ;
 
 	lexer_t l = lexer_create(prog) ;
-	lexer_debug_prnt(&l) ;
+	//lexer_debug_prnt(&l) ;
 	lexer_reset(&l) ;
 
 	node_t *n = parse(&l) ;
-	parser_debug_prnt(n, 0) ;
+	//parser_debug_prnt(n, 0) ;
 
-	*/
-
+	asm_t a = assemble(n) ;
 	vm_t m = vm_create() ;
 
-	/* fibonacci very cool */
+	// like i am weird for doing the sizeof thingy but who cares
+	memcpy(m.mem, a.value, a.len * sizeof(uint8_t)) ; 
+
+	/* fibonacci very cool 
 
 	m.mem[0] = VM_LDX << 2 ;
 	m.mem[1] = 1 ;
@@ -44,19 +47,21 @@ int main(void)
 	m.mem[19] = 0 ;
 	m.mem[20] = VM_HALT << 2 ;
 
-	printf("\033[2J");
-	printf("\033[0;0H") ;
+	*/
+
+	printf("\n+---------------------------------------+\n") ;
+	disassemble(&m) ;
 
 	while(getc(stdin) != EOF)
 	{
+		printf("\033[2J");
+		printf("\033[0;0H") ;
 		vm_step(&m) ;
 		vm_log(&m) ;
-		printf("\033[0;0H") ;
 	}
 	vm_delete(&m) ;
 
-	/*
 	node_delete(n) ;
 	lexer_delete(&l) ;
-	*/
+	asm_delete(&a) ;
 }

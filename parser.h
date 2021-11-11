@@ -9,7 +9,7 @@ typedef struct node_t
 	struct node_t *first ; // sub node first
 	struct node_t *last ; // sub node second
 	struct node_t *next ; // the next subnode
-	int len_sub_nodes ; // number of subnodes
+	unsigned int len_sub_nodes ; // number of subnodes
 } node_t;
 
 node_t *node_create(element_t value) ;

@@ -32,7 +32,7 @@ lexer_t lexer_create(const char *buffer)
 			case '#': e.type = TOKEN_HASH  ; e.len = 1 ; break ;
 			case ':': e.type = TOKEN_COLON ; e.len = 1 ; break ;
 
-			case '-':
+			// case '-':
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
 
