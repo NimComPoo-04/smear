@@ -1,0 +1,86 @@
++---------------------------------------+
+(if (+ 1) (+ 3) (+ 2))
+
++---------------------------------------+
+[ TOKEN_LPAREN	( ]
+[ TOKEN_ATOM	if ]
+[ TOKEN_LPAREN	( ]
+[ TOKEN_ATOM	+ ]
+[ TOKEN_NUMBER	1 ]
+[ TOKEN_RPAREN	) ]
+[ TOKEN_LPAREN	( ]
+[ TOKEN_ATOM	+ ]
+[ TOKEN_NUMBER	3 ]
+[ TOKEN_RPAREN	) ]
+[ TOKEN_LPAREN	( ]
+[ TOKEN_ATOM	+ ]
+[ TOKEN_NUMBER	2 ]
+[ TOKEN_RPAREN	) ]
+[ TOKEN_RPAREN	) ]
+
++---------------------------------------+
+PROG
+	LIST
+		if
+		LIST
+			+
+			1
+		LIST
+			+
+			3
+		LIST
+			+
+			2
+
++---------------------------------------+
+0	68 1 0 0 0	PUSH 1
+5	4 0 0 0 0	LDX 0
+a	8 1 0 0 0	LDY 1
+f	70		INT
+
+10	4 4 0 0 0	LDX 4
+15	39		ADD $SP
+16	69		PUSH $A
+17	68 3 0 0 0	PUSH 3
+1c	4 0 0 0 0	LDX 0
+21	8 1 0 0 0	LDY 1
+26	70		INT
+
+27	4 4 0 0 0	LDX 4
+2c	39		ADD $SP
+2d	69		PUSH $A
+2e	68 2 0 0 0	PUSH 2
+33	4 0 0 0 0	LDX 0
+38	8 1 0 0 0	LDY 1
+3d	70		INT
+
+3e	4 4 0 0 0	LDX 4
+43	39		ADD $SP
+44	69		PUSH $A
+45	68 1 0 0 0	PUSH 1
+4a	4 0 0 0 0	LDX 0
+4f	8 1 0 0 0	LDY 1
+54	70		INT
+
+55	4 4 0 0 0	LDX 4
+5a	39		ADD $SP
+5b	69		PUSH $A
+
+5c	6d		POP $X
+5d	48		CMP
+5e	5c 0 0 0 0	JZE 0
+63	68 3 0 0 0	PUSH 3
+68	4 0 0 0 0	LDX 0
+6d	8 1 0 0 0	LDY 1
+72	70		INT
+73	4 4 0 0 0	LDX 4
+78	39		ADD $SP
+79	69		PUSH $A
+7a	4c 0 0 0 0	JMP 0
+7f	68 2 0 0 0	PUSH 2
+84	4 0 0 0 0	LDX 0
+89	8 1 0 0 0	LDY 1
+8e	70		INT
+8f	4 4 0 0 0	LDX 4
+94	39		ADD $SP
+95	69		PUSH $A

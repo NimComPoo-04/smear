@@ -6,6 +6,20 @@
 #include "vm.h"
 #include "parser.h"
 
+/*
+	send in values from back to front
+	first one is the function itself
+	return value would be pushed onto the stack
+*/
+
+enum
+{
+	KW_NONE,
+	KW_IF,
+	KW_REP,
+	KW_DEF
+} ;
+
 typedef struct
 {
 	uint8_t *value ;

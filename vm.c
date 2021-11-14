@@ -8,8 +8,7 @@ vm_t vm_create()
 	vm_t v = {0} ;
 
 	v.A = 0 ;
-	v.X = 0 ;
-	v.Y = 0 ;
+	v.X = 0 ; v.Y = 0 ;
 
 	v.SP = MEMCAP ;
 	v.IP = 0 ;
@@ -39,7 +38,9 @@ static void interupt_controler(vm_t *m)
 	switch(m->X)
 	{
 		case IC_ADD:
-			for(uint32_t i = 0; i < m->Y; i++)
+			m->A = tou(&m->mem[sp]) ;
+			sp = sp + 4 ;
+			for(uint32_t i = 1; i < m->Y; i++)
 			{
 				m->A = tou(&m->mem[sp]) + m->A ;
 				sp = sp + 4 ;
@@ -47,7 +48,9 @@ static void interupt_controler(vm_t *m)
 			break ;
 
 		case IC_MUL:
-			for(uint32_t i = 0; i < m->Y; i++)
+			m->A = tou(&m->mem[sp]) ;
+			sp = sp + 4 ;
+			for(uint32_t i = 1; i < m->Y; i++)
 			{
 				m->A = tou(&m->mem[sp]) * m->A ;
 				sp = sp + 4 ;
@@ -55,21 +58,33 @@ static void interupt_controler(vm_t *m)
 			break ;
 
 		case IC_SUB:
-			for(uint32_t i = 0; i < m->Y-1; i++)
+			m->A = tou(&m->mem[sp]) ;
+			sp = sp + 4 ;
+			for(uint32_t i = 1; i < m->Y; i++)
 			{
-				m->A = tou(&m->mem[sp]) + m->A ;
+				m->A = tou(&m->mem[sp]) - m->A ;
 				sp = sp + 4 ;
 			}
-			m->A = tou(&m->mem[sp]) - m->A; 
 			break ;
 
 		case IC_DIV:
-			for(uint32_t i = 0; i < m->Y-1; i++)
+			m->A = tou(&m->mem[sp]) ;
+			sp = sp + 4 ;
+			for(uint32_t i = 1; i < m->Y; i++)
 			{
-				m->A = tou(&m->mem[sp]) * m->A ;
+				m->A = tou(&m->mem[sp]) / m->A ;
 				sp = sp + 4 ;
 			}
-			m->A = tou(&m->mem[sp]) / m->A; 
+			break ;
+
+		case IC_MOD:
+			m->A = tou(&m->mem[sp]) ;
+			sp = sp + 4 ;
+			for(uint32_t i = 1; i < m->Y; i++)
+			{
+				m->A = tou(&m->mem[sp]) % m->A ;
+				sp = sp + 4 ;
+			}
 			break ;
 
 		default: printf("<-- Wrong Intrupt -->") ;
@@ -146,10 +161,10 @@ void vm_step(vm_t *v)
 			     break ;
 
 		case VM_JMP: v->IP = tou(&v->mem[v->IP+1]); return;
-		case VM_JLT: if(((v->PS & 8) >> 3) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
-		case VM_JGT: if(((v->PS & 4) >> 2) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
-		case VM_JEQ: if(((v->PS & 2) >> 1) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
-		case VM_JZE: if(((v->PS & 1) >> 0) == 1) v->IP = tou(&v->mem[v->IP+1]); return;
+		case VM_JLT: if(((v->PS & 8) >> 3) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
+		case VM_JGT: if(((v->PS & 4) >> 2) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
+		case VM_JEQ: if(((v->PS & 2) >> 1) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
+		case VM_JZE: if(((v->PS & 1) >> 0) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
 
 		case VM_JSR:
 			toarr(v->IP, &v->mem[v->SP-4]) ;
@@ -224,8 +239,8 @@ void vm_step(vm_t *v)
 
 void vm_log(vm_t *v)
 {
-	printf("%d\t%d\t%d\n", v->A, v->X, v->Y) ;
-	printf("%d\t%d\n\n", v->SP, v->IP) ;
+	printf("A: %d\tX: %d\tY: %d\n", v->A, v->X, v->Y) ;
+	printf("SP: %x\tIP: %x\n\n", v->SP, v->IP) ;
 	for(uint32_t i = v->SP; i < MEMCAP; i++)
 	{
 		printf("%d\t%d\n", i, v->mem[i]) ;
@@ -236,3 +251,73 @@ void vm_delete(vm_t *v)
 {
 	free(v->mem) ;
 }
+
+#ifdef _TEST_VM_
+
+#define TEST_INS_JMP
+
+void main(void)
+{
+	vm_t m = vm_create() ;
+
+#ifdef FIBO
+	// fibonacci very cool 
+	m.mem[0] = VM_LDX << 2 ;
+	m.mem[1] = 1 ;
+	m.mem[2] = 0 ;
+	m.mem[3] = 0 ;
+	m.mem[4] = 0 ;
+	m.mem[5] = VM_LDY << 2 ;
+	m.mem[6] = 0 ;
+	m.mem[7] = 0 ;
+	m.mem[8] = 0 ;
+	m.mem[9] = 0 ;
+	m.mem[10] = VM_ADD << 2 ;	  // adds x y -> a
+	m.mem[11] = (VM_PUSH << 2) | 1 ;  // save a
+	m.mem[12] = VM_TAX << 2 ;	  // move x to a
+	m.mem[13] = VM_TYA << 2 ;	  // move a to y in effect y to x
+	m.mem[14] = (VM_POP << 2) | 1 ;   // move saved a to x
+	m.mem[15] = VM_JMP << 2 ;         // jump to the add statement
+	m.mem[16] = 10 ;
+	m.mem[17] = 0 ;
+	m.mem[18] = 0 ;
+	m.mem[19] = 0 ;
+	m.mem[20] = VM_HALT << 2 ;
+#endif
+
+#ifdef TEST_INS_JMP
+
+	m.X = 10 ;
+
+	m.mem[0] = VM_CMP << 2 ;
+	m.mem[1] = VM_JZE << 2 ;
+	m.mem[2] = 11 ;
+	m.mem[3] = 0 ;
+	m.mem[4] = 0 ;
+	m.mem[5] = 0 ;
+	m.mem[6] = (VM_LDA << 2) | 0 ;
+	m.mem[7] = 69 ;
+	m.mem[8] = 0 ;
+	m.mem[9] = 0 ;
+	m.mem[10] = 0 ;
+	m.mem[11] = (VM_LDA << 2) | 0 ;
+	m.mem[12] = 88 ;
+	m.mem[13] = 0 ;
+	m.mem[14] = 0 ;
+	m.mem[15] = 0 ;
+	m.mem[16] = VM_HALT << 2 ;
+
+#endif
+
+	while(getc(stdin) != EOF)
+	{
+		printf("\033[2J");
+		printf("\033[0;0H") ;
+		vm_step(&m) ;
+		vm_log(&m) ;
+	}
+
+	vm_delete(&m) ;
+}
+
+#endif

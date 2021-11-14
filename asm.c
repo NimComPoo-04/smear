@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "asm.h"
 
-uint32_t symbol_lookup(element_t e)
+static uint32_t symbol_lookup(element_t e)
 {
 	// TODO: implement a hash map to look up symbol
 
@@ -24,13 +25,27 @@ uint32_t symbol_lookup(element_t e)
 	return IC_ERROR ;
 }
 
+static uint8_t iselekeyword(element_t e)
+{
+	int ret = 0 ;
+
+	char c = e.value[e.len] ;
+	e.value[e.len] = 0 ;
+
+	if(strcmp(e.value, "if") == 0) ret = KW_IF ;
+	if(strcmp(e.value, "rep") == 0) ret = KW_REP ;
+	if(strcmp(e.value, "def") == 0) ret = KW_DEF ;
+
+	e.value[e.len] = c ;
+
+	return ret ;
+}
+
 void asm_lst(asm_t *x, node_t *n)
 {
 	if(n == NULL) return ;
 	if(n->first == NULL)
 	{
-		lexer_debug_element_prnt(n->value) ;
-
 		if(n->value.type == TOKEN_NUMBER)
 		{
 			char c = n->value.value[n->value.len] ;
@@ -49,49 +64,156 @@ void asm_lst(asm_t *x, node_t *n)
 		{
 			uint32_t ux = symbol_lookup(n->value) ;
 
-			asm_add(x, (VM_LDX << 2) | 0) ;
+			if(ux != IC_ERROR)
+			{
+				asm_add(x, (VM_LDX << 2) | 0) ;
 
-			asm_add(x, (ux >> 0*8) & 0xFF) ;
-			asm_add(x, (ux >> 1*8) & 0xFF) ;
-			asm_add(x, (ux >> 2*8) & 0xFF) ;
-			asm_add(x, (ux >> 3*8) & 0xFF) ;
+				asm_add(x, (ux >> 0*8) & 0xFF) ;
+				asm_add(x, (ux >> 1*8) & 0xFF) ;
+				asm_add(x, (ux >> 2*8) & 0xFF) ;
+				asm_add(x, (ux >> 3*8) & 0xFF) ;
+			}
 		}
 	}
 	else
 	{
-		node_t *f = n->first->next ;
 
-		while(f != NULL)
+		if(n->first->value.type == TOKEN_ATOM)
 		{
-			asm_lst(x, f) ;
-			f = f->next ;
+			int kb_wrd = iselekeyword(n->first->value) ;
+			switch(kb_wrd)
+			{
+				case KW_NONE:
+					{
+						node_t *f = n->first->next ;
+
+						while(f != NULL)
+						{
+							asm_lst(x, f) ;
+							f = f->next ;
+						}
+
+						if(n->first->value.type == TOKEN_NUMBER)
+						{
+							printf("ERROR: function name can not be a number!\n") ;
+							exit(0) ;
+						}
+
+						asm_lst(x, n->first) ;
+
+						asm_add(x, (VM_LDY << 2) | 0) ;
+						asm_add(x, ((n->len_sub_nodes-1) >> 0*8) & 0xFF) ;
+						asm_add(x, ((n->len_sub_nodes-1) >> 1*8) & 0xFF) ;
+						asm_add(x, ((n->len_sub_nodes-1) >> 2*8) & 0xFF) ;
+						asm_add(x, ((n->len_sub_nodes-1) >> 3*8) & 0xFF) ;
+						asm_add(x, (VM_INT << 2) | 0) ;
+
+						uint32_t ud = (n->len_sub_nodes-1) * 4 ;
+						asm_add(x, (VM_LDX << 2) | 0) ;
+						asm_add(x, (ud >> 0*8) & 0xFF) ;
+						asm_add(x, (ud >> 1*8) & 0xFF) ;
+						asm_add(x, (ud >> 2*8) & 0xFF) ;
+						asm_add(x, (ud >> 3*8) & 0xFF) ;
+						asm_add(x, (VM_ADD << 2) | 1) ;
+						asm_add(x, (VM_PUSH << 2) | 1) ;
+					}
+					break ;
+
+				case KW_IF:
+					{
+						if(n->len_sub_nodes != 4)
+						{
+							printf("ERROR: if statement error!!\n") ;
+							exit(0) ;
+						}
+
+						uint32_t edit_loc1 = 0 ;
+						uint32_t edit_loc2 = 0 ;
+
+						asm_lst(x, n->first->next) ;
+
+						asm_add(x, (VM_POP << 2) | 1) ;
+						asm_add(x, (VM_CMP << 2) | 0) ;
+
+						asm_add(x, (VM_JZE << 2) | 0) ;
+						edit_loc1 = x->len ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+
+						// IF CASE
+						asm_lst(x, n->first->next->next) ;
+
+						asm_add(x, (VM_JMP << 2) | 0) ;
+						edit_loc2 = x->len ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+
+						x->value[edit_loc1] = (x->len >> 0*8) & 0xFF ;
+						x->value[edit_loc1+1] = (x->len >> 1*8) & 0xFF ;
+						x->value[edit_loc1+2] = (x->len >> 2*8) & 0xFF ;
+						x->value[edit_loc1+3] = (x->len >> 3*8) & 0xFF ;
+
+						// ELSE CASE
+						asm_lst(x, n->first->next->next->next) ;
+
+						x->value[edit_loc2] = (x->len >> 0*8) & 0xFF ;
+						x->value[edit_loc2+1] = (x->len >> 1*8) & 0xFF ;
+						x->value[edit_loc2+2] = (x->len >> 2*8) & 0xFF ;
+						x->value[edit_loc2+3] = (x->len >> 3*8) & 0xFF ;
+
+					}
+					break ;
+				case KW_REP:
+					{
+						if(n->len_sub_nodes != 3)
+						{
+							printf("ERROR: rep statement error!!\n") ;
+							exit(0) ;
+						}
+
+						uint32_t edit_loc1 = 0 ;
+						uint32_t edit_loc2 = 0 ;
+
+						asm_lst(x, n->first->next) ;
+
+						asm_add(x, (VM_POP << 2) | 1) ;
+						asm_add(x, (VM_CMP << 2) | 1) ;
+
+						edit_loc1 = x->len ;
+						asm_add(x, (VM_JZE << 2) | 0) ;
+						edit_loc2 = x->len ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+						asm_add(x, 0) ;
+
+						asm_lst(x, n->first->next->next) ;
+
+						asm_add(x, (VM_POP << 2) | 0) ;
+
+						asm_add(x, (VM_JMP << 2) | 0) ;
+						asm_add(x, (edit_loc1 >> 0*8) & 0xFF) ;
+						asm_add(x, (edit_loc1 >> 1*8) & 0xFF) ;
+						asm_add(x, (edit_loc1 >> 2*8) & 0xFF) ;
+						asm_add(x, (edit_loc1 >> 3*8) & 0xFF) ;
+
+						x->value[edit_loc2] = (x->len >> 0*8) & 0xFF ;
+						x->value[edit_loc2+1] = (x->len >> 1*8) & 0xFF ;
+						x->value[edit_loc2+2] = (x->len >> 2*8) & 0xFF ;
+						x->value[edit_loc2+3] = (x->len >> 3*8) & 0xFF ;
+
+						asm_add(x, (VM_PUSH << 2) | 1) ;
+					}
+					break ;
+				case KW_DEF:
+					printf("<-- not figured out yet ;-) -->\n") ;
+				break ;
+			}
 		}
-		
-		if(n->first->value.type == TOKEN_NUMBER)
-		{
-			printf("ERROR: function name can not be a number!\n") ;
-			exit(0) ;
-		}
-
-		asm_lst(x, n->first) ;
-
-		// TODO: loading the ldx register
-
-		asm_add(x, (VM_LDY << 2) | 0) ;
-		asm_add(x, ((n->len_sub_nodes-1) >> 0*8) & 0xFF) ;
-		asm_add(x, ((n->len_sub_nodes-1) >> 1*8) & 0xFF) ;
-		asm_add(x, ((n->len_sub_nodes-1) >> 2*8) & 0xFF) ;
-		asm_add(x, ((n->len_sub_nodes-1) >> 3*8) & 0xFF) ;
-		asm_add(x, (VM_INT << 2) | 0) ;
-
-		uint32_t ud = (n->len_sub_nodes-1) * 4 ;
-		asm_add(x, (VM_LDX << 2) | 0) ;
-		asm_add(x, (ud >> 0*8) & 0xFF) ;
-		asm_add(x, (ud >> 1*8) & 0xFF) ;
-		asm_add(x, (ud >> 2*8) & 0xFF) ;
-		asm_add(x, (ud >> 3*8) & 0xFF) ;
-		asm_add(x, (VM_ADD << 2) | 1) ;
-		asm_add(x, (VM_PUSH << 2) | 1) ;
 	}
 }
 
@@ -188,7 +310,7 @@ void disassemble(vm_t *m)
 
 asm_t asm_create()
 {
-	return (asm_t){NULL, 0} ;
+	return (asm_t){0, 0} ;
 }
 
 void asm_add(asm_t *a, uint8_t x)

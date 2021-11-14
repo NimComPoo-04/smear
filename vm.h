@@ -12,6 +12,7 @@ enum
 	IC_MUL,
 	IC_DIV,
 	IC_MOD,
+	IC_EQ,
 	IC_ERROR
 } ;
 
