@@ -1,323 +1,140 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
-#include "vm.h"
-
-vm_t vm_create()
+#include "vm.h" 
+vm_t vm_create(void)
 {
 	vm_t v = {0} ;
-
-	v.A = 0 ;
-	v.X = 0 ; v.Y = 0 ;
-
-	v.SP = MEMCAP ;
-	v.IP = 0 ;
-	v.PS = 0 ;
-
-	v.mem = calloc(sizeof(uint8_t), MEMCAP) ;
-
+	v.mem = malloc(MEMCAP) ;
+	v.R[REG_SP] = MEMCAP ;
 	return v ;
-}
-
-static uint32_t tou(uint8_t *m)
-{
-	return m[0] | (m[1] << 8) | (m[2] << 16) | (m[3] << 24) ;
-}
-
-static void toarr(uint32_t x, uint8_t *m)
-{
-	m[0] = (x >> 8 * 0) & 0xFF ;
-	m[1] = (x >> 8 * 1) & 0xFF ;
-	m[2] = (x >> 8 * 2) & 0xFF ;
-	m[3] = (x >> 8 * 3) & 0xFF ;
-}
-
-static void interupt_controler(vm_t *m)
-{
-	uint32_t sp = m->SP;
-	switch(m->X)
-	{
-		case IC_ADD:
-			m->A = tou(&m->mem[sp]) ;
-			sp = sp + 4 ;
-			for(uint32_t i = 1; i < m->Y; i++)
-			{
-				m->A = tou(&m->mem[sp]) + m->A ;
-				sp = sp + 4 ;
-			}
-			break ;
-
-		case IC_MUL:
-			m->A = tou(&m->mem[sp]) ;
-			sp = sp + 4 ;
-			for(uint32_t i = 1; i < m->Y; i++)
-			{
-				m->A = tou(&m->mem[sp]) * m->A ;
-				sp = sp + 4 ;
-			}
-			break ;
-
-		case IC_SUB:
-			m->A = tou(&m->mem[sp]) ;
-			sp = sp + 4 ;
-			for(uint32_t i = 1; i < m->Y; i++)
-			{
-				m->A = tou(&m->mem[sp]) - m->A ;
-				sp = sp + 4 ;
-			}
-			break ;
-
-		case IC_DIV:
-			m->A = tou(&m->mem[sp]) ;
-			sp = sp + 4 ;
-			for(uint32_t i = 1; i < m->Y; i++)
-			{
-				m->A = tou(&m->mem[sp]) / m->A ;
-				sp = sp + 4 ;
-			}
-			break ;
-
-		case IC_MOD:
-			m->A = tou(&m->mem[sp]) ;
-			sp = sp + 4 ;
-			for(uint32_t i = 1; i < m->Y; i++)
-			{
-				m->A = tou(&m->mem[sp]) % m->A ;
-				sp = sp + 4 ;
-			}
-			break ;
-
-		default: printf("<-- Wrong Intrupt -->") ;
-	}
 }
 
 void vm_step(vm_t *v)
 {
-	uint8_t opcode = v->mem[v->IP] ;
+#	define INS_PT (v->R[REG_IP])
+#	define OPCODE (v->mem[INS_PT])
+#	define RS     (v->R[(v->mem[INS_PT+1] & 0xF)])
+#	define RD     (v->R[(v->mem[INS_PT+1] >> 4)])
+#	define IMM    (v->mem[INS_PT+2] | v->mem[INS_PT+3] << 8)
+#	define JIM    (v->mem[INS_PT+1] | v->mem[INS_PT+2] << 8)
 
-	switch(opcode >> 2)
+#	define FLAG_ON(x) (v->F[x] = 1)
+#	define FLAG_OFF(x) (v->F[x] = 0)
+
+	switch(OPCODE)
 	{
-		case VM_LDA: 
-			if((opcode & 3) == 0) 
-				v->A = tou(&v->mem[v->IP+1]);
-			else if((opcode & 3) == 1)
-				v->A = v->mem[tou(&v->mem[v->IP+1])];
-			v->IP+=4;
-			break;
+		case VM_NOP: INS_PT += 1; break;
 
-		case VM_LDX: 
-			if((opcode & 3) == 0) 
-				v->X = tou(&v->mem[v->IP+1]);
-			else if((opcode & 3) == 1)
-				v->X = v->mem[tou(&v->mem[v->IP+1])];
-			v->IP+=4;
-			break;
+		case VM_HALT: break;
 
-		case VM_LDY: 
-			if((opcode & 3) == 0) 
-				v->Y = tou(&v->mem[v->IP+1]);
-			else if((opcode & 3) == 1)
-				v->Y = v->mem[tou(&v->mem[v->IP+1])];
-			v->IP+=4;
-			break;
-
-		case VM_STA: toarr(v->A, &v->mem[tou(&v->mem[v->IP+1])]); v->IP+=4; break;
-		case VM_STX: toarr(v->X, &v->mem[tou(&v->mem[v->IP+1])]); v->IP+=4; break;
-		case VM_STY: toarr(v->Y, &v->mem[tou(&v->mem[v->IP+1])]); v->IP+=4; break;
-
-		case VM_TAX: v->A = v->X; break;
-		case VM_TAY: v->A = v->Y; break;
-		case VM_TXA: v->X = v->A; break;
-		case VM_TYA: v->Y = v->A; break;
-
-		case VM_TSA: v->SP = v->A; break;
-		case VM_TIA: v->IP = v->A; break;
-		case VM_TAS: v->A = v->SP; break;
-		case VM_TAI: v->A = v->IP; break;
-
-		case VM_ADD:
-			if((opcode & 3) == 0)
-				v->A = v->X + v->Y;
-			else if((opcode & 3) == 1)
-				v->SP += v->X ;
-			break;
-
-		case VM_SUB:
-			if((opcode & 3) == 0)
-				v->A = v->X - v->Y;
-			else if((opcode & 3) == 1)
-				v->SP -= v->X ;
-			break ;
-
-		case VM_SHL: v->A = v->X << v->Y; break;
-		case VM_SHR: v->A = v->X >> v->Y; break;
+		case VM_ADD:  RS += RD  ; INS_PT += 2; break;
+		case VM_ADDI: RS += IMM ; INS_PT += 4; break;
+		case VM_SUB:  RS -= RD  ; INS_PT += 2; break;
+		case VM_SUBI: RS -= IMM ; INS_PT += 4; break;
+		case VM_AND:  RS &= RD  ; INS_PT += 2; break;
+		case VM_ANDI: RS &= IMM ; INS_PT += 4; break;
+		case VM_NOT:  RS  =~RS  ; INS_PT += 2; break;
+		case VM_NOTI: RS  =~IMM ; INS_PT += 4; break;
+		case VM_SHL:  RS <<= RD ; INS_PT += 2; break;
+		case VM_SHLI: RS <<= IMM; INS_PT += 4; break;
+		case VM_SHR:  RS >>= RD ; INS_PT += 2; break;
+		case VM_SHRI: RS >>= IMM; INS_PT += 4; break;
 
 		case VM_CMP:
-			     v->PS = 0 ;
-			     if(v->X < v->Y) v->PS |= 8 ;
-			     if(v->X > v->Y) v->PS |= 4 ;
-			     if(v->X == v->Y) v->PS |= 2 ;
-			     if(v->X == 0) v->PS |= 1 ;
+			      if(RS > RD) FLAG_ON(FLAG_GT); else FLAG_OFF(FLAG_GT);
+			      if(RS < RD) FLAG_ON(FLAG_LT); else FLAG_OFF(FLAG_LT);
+			      if(RS == RD)FLAG_ON(FLAG_EQ); else FLAG_OFF(FLAG_EQ);
+
+			      if(RD == 0 || RS == 0) FLAG_ON(FLAG_ZE);
+			      else FLAG_OFF(FLAG_ZE);
+			      INS_PT += 2;
+			      break;
+
+		case VM_CMPI:
+			      if(RS > (uint32_t)IMM) FLAG_ON(FLAG_GT); else FLAG_OFF(FLAG_GT);
+			      if(RS < (uint32_t)IMM) FLAG_ON(FLAG_LT); else FLAG_OFF(FLAG_LT);
+			      if(RS == (uint32_t)IMM)FLAG_ON(FLAG_EQ); else FLAG_OFF(FLAG_EQ);
+
+			      if(RS == 0 || IMM == 0) FLAG_ON(FLAG_ZE);
+			      else FLAG_OFF(FLAG_ZE);
+			      INS_PT += 4;
+			      break;
+
+		case VM_JMP: INS_PT = JIM; break;
+
+		case VM_JLT: INS_PT = v->F[FLAG_LT] ? (uint32_t)JIM : (INS_PT + 3); break;
+		case VM_JGT: INS_PT = v->F[FLAG_GT] ? (uint32_t)JIM : (INS_PT + 3); break;
+		case VM_JEQ: INS_PT = v->F[FLAG_EQ] ? (uint32_t)JIM : (INS_PT + 3); break;
+		case VM_JZE: INS_PT = v->F[FLAG_ZE] ? (uint32_t)JIM : (INS_PT + 3); break;
+
+		case VM_JLE: INS_PT = v->F[FLAG_LT] && v->F[FLAG_EQ] ? (uint32_t)JIM : (INS_PT + 3); break;
+		case VM_JGE: INS_PT = v->F[FLAG_GT] && v->F[FLAG_EQ] ? (uint32_t)JIM : (INS_PT + 3); break;
+
+		case VM_JNE: INS_PT = !v->F[FLAG_EQ] ? (uint32_t)JIM : (INS_PT + 3); break;
+		case VM_JNZ: INS_PT = !v->F[FLAG_ZE] ? (uint32_t)JIM : (INS_PT + 3); break;
+
+		case VM_JSR: v->R[REG_RP] = INS_PT;
+			     INS_PT = JIM;
+			     INS_PT += 3;
+			     break;
+
+		case VM_JRE: INS_PT = RS;
+			     INS_PT += 2;
+			     break;
+
+		case VM_JAR: v->R[REG_RP] = INS_PT;
+			     INS_PT = RS;
+			     INS_PT += 2; 
+			     break;
+
+		case VM_LDR: RS = RD; INS_PT += 2; break;
+		case VM_LDI: RS = IMM; INS_PT += 4; break;
+
+		case VM_LDDI: RS = v->mem[IMM]; INS_PT += 4; break;
+		case VM_LDDR: RS = v->mem[RD]; INS_PT += 2; break;
+		case VM_LDII: RS = v->mem[v->mem[IMM]]; INS_PT += 4; break;
+		case VM_LDIR: RS = v->mem[v->mem[RD]]; INS_PT += 2; break;
+
+		case VM_STDI: v->mem[IMM] = RD; INS_PT += 4; break;
+		case VM_STDR: v->mem[RS] = RD; INS_PT += 2; break;
+		case VM_STII: v->mem[v->mem[IMM]] = RD; INS_PT += 4; break;
+		case VM_STIR: v->mem[v->mem[RS]] = RD; INS_PT += 4; break;
+
+		case VM_LOG: vm_log(v) ;
+			     INS_PT++;
+			     break;
+		case VM_INT: FLAG_ON(FLAG_IN);
+			     INS_PT++ ;
 			     break ;
-
-		case VM_JMP: v->IP = tou(&v->mem[v->IP+1]); return;
-		case VM_JLT: if(((v->PS & 8) >> 3) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
-		case VM_JGT: if(((v->PS & 4) >> 2) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
-		case VM_JEQ: if(((v->PS & 2) >> 1) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
-		case VM_JZE: if(((v->PS & 1) >> 0) == 1) v->IP = tou(&v->mem[v->IP+1]); else v->IP+= 5; return;
-
-		case VM_JSR:
-			toarr(v->IP, &v->mem[v->SP-4]) ;
-			v->SP -= 4 ;
-			v->IP = tou(&v->mem[v->IP+1]) ;
-			return ;
-
-		case VM_RET:
-			v->IP = tou(&v->mem[v->SP]) ;
-			v->SP += 4 ;
-			return ;
-
-		case VM_PUSH:
-			if((opcode & 3) == 0)
-			{
-				toarr(tou(&v->mem[v->IP+1]), &v->mem[v->SP-4]) ;
-				v->IP += 4 ;
-				v->SP -= 4 ;
-			}
-			else if((opcode & 3) == 1)
-			{
-				toarr(v->A, &v->mem[v->SP-4]) ;
-				v->SP -= 4 ;
-			}
-			else if((opcode & 3) == 2)
-			{
-				toarr(v->X, &v->mem[v->SP-4]) ;
-				v->SP -= 4 ;
-			}
-			else if((opcode & 3) == 3)
-			{
-				toarr(v->Y, &v->mem[v->SP-4]) ;
-				v->SP -= 4 ;
-			}
-			break;
-
-		case VM_POP:
-			if((opcode & 3) == 0)
-			{
-				v->A = tou(&v->mem[v->SP]) ;
-				v->SP+=4 ;
-			}
-			else if((opcode & 3) == 1)
-			{
-				v->X = tou(&v->mem[v->SP]) ;
-				v->SP+=4 ;
-			}
-			else if((opcode & 3) == 2)
-			{
-				v->Y = tou(&v->mem[v->SP]) ;
-				v->SP+=4 ;
-			}
-			else if((opcode & 3) == 3)
-			{
-				v->IP = tou(&v->mem[v->SP]) ;
-				v->SP+=4 ;
-			}
-
-			break;
-
-		case VM_INT:
-			interupt_controler(v) ;
-			break;
-
-		case VM_HALT: /* do nothing ;-) */return ;
-
-		default: printf("<-- Wront Opcode -->\n") ;
 	}
-
-	v->IP++ ;
 }
 
 void vm_log(vm_t *v)
 {
-	printf("A: %d\tX: %d\tY: %d\n", v->A, v->X, v->Y) ;
-	printf("SP: %x\tIP: %x\n\n", v->SP, v->IP) ;
-	for(uint32_t i = v->SP; i < MEMCAP; i++)
-	{
-		printf("%d\t%d\n", i, v->mem[i]) ;
-	}
+	printf("┌──────────────┬──────────────┬──────────────┬──────────────┐\n");
+	printf("| A : %8x | B : %8x | C : %8x | I : %8x |\n",
+			v->R[REG_A], v->R[REG_B], v->R[REG_C], v->R[REG_I]);
+	printf("├──────────────┼──────────────┴──────────────┴──────────────┘\n");
+	printf("| T : %8x |\n", v->R[REG_T]);
+	printf("├──────────────┼──────────────┐\n");
+	printf("| SI :%8x | DI :%8x |\n", v->R[REG_SI], v->R[REG_DI]);
+	printf("├──────────────┼──────────────┼──────────────┬──────────────┐\n");
+	printf("| BP :%8x | RP :%8x | SP :%8x | IP :%8x |\n",
+			v->R[REG_BP], v->R[REG_RP], v->R[REG_SP], v->R[REG_IP]);
+	printf("└──────────────┴──────────────┴──────────────┴──────────────┘\n\n");
+
+	printf("┌────────┬────────┬────────┬────────┬────────┐\n") ;
+	printf("│ LT : %d │ GT : %d │ EQ : %d │ ZE : %d │ IN : %d │\n",
+			v->F[FLAG_LT], v->F[FLAG_GT], v->F[FLAG_EQ], v->F[FLAG_ZE], v->F[FLAG_IN]);
+	printf("└────────┴────────┴────────┴────────┴────────┘\n\n") ;
+}
+
+void vm_exec(vm_t *v)
+{
+	while(1) vm_step(v) ;
 }
 
 void vm_delete(vm_t *v)
 {
 	free(v->mem) ;
 }
-
-#ifdef _TEST_VM_
-
-#define TEST_INS_JMP
-
-void main(void)
-{
-	vm_t m = vm_create() ;
-
-#ifdef FIBO
-	// fibonacci very cool 
-	m.mem[0] = VM_LDX << 2 ;
-	m.mem[1] = 1 ;
-	m.mem[2] = 0 ;
-	m.mem[3] = 0 ;
-	m.mem[4] = 0 ;
-	m.mem[5] = VM_LDY << 2 ;
-	m.mem[6] = 0 ;
-	m.mem[7] = 0 ;
-	m.mem[8] = 0 ;
-	m.mem[9] = 0 ;
-	m.mem[10] = VM_ADD << 2 ;	  // adds x y -> a
-	m.mem[11] = (VM_PUSH << 2) | 1 ;  // save a
-	m.mem[12] = VM_TAX << 2 ;	  // move x to a
-	m.mem[13] = VM_TYA << 2 ;	  // move a to y in effect y to x
-	m.mem[14] = (VM_POP << 2) | 1 ;   // move saved a to x
-	m.mem[15] = VM_JMP << 2 ;         // jump to the add statement
-	m.mem[16] = 10 ;
-	m.mem[17] = 0 ;
-	m.mem[18] = 0 ;
-	m.mem[19] = 0 ;
-	m.mem[20] = VM_HALT << 2 ;
-#endif
-
-#ifdef TEST_INS_JMP
-
-	m.X = 10 ;
-
-	m.mem[0] = VM_CMP << 2 ;
-	m.mem[1] = VM_JZE << 2 ;
-	m.mem[2] = 11 ;
-	m.mem[3] = 0 ;
-	m.mem[4] = 0 ;
-	m.mem[5] = 0 ;
-	m.mem[6] = (VM_LDA << 2) | 0 ;
-	m.mem[7] = 69 ;
-	m.mem[8] = 0 ;
-	m.mem[9] = 0 ;
-	m.mem[10] = 0 ;
-	m.mem[11] = (VM_LDA << 2) | 0 ;
-	m.mem[12] = 88 ;
-	m.mem[13] = 0 ;
-	m.mem[14] = 0 ;
-	m.mem[15] = 0 ;
-	m.mem[16] = VM_HALT << 2 ;
-
-#endif
-
-	while(getc(stdin) != EOF)
-	{
-		printf("\033[2J");
-		printf("\033[0;0H") ;
-		vm_step(&m) ;
-		vm_log(&m) ;
-	}
-
-	vm_delete(&m) ;
-}
-
-#endif

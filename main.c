@@ -4,10 +4,10 @@
 #include "parser.h"
 #include "lexer.h"
 #include "vm.h"
-#include "asm.h"
 
 int main(void)
 {
+#if 0
 	char prog[] = "(rep (+ 1) (+ 3 4))" ;
 
 	printf("+---------------------------------------+\n") ;
@@ -21,25 +21,32 @@ int main(void)
 	node_t *n = parse(&l) ;
 	parser_debug_prnt(n, 0) ;
 
-	asm_t a = assemble(n) ;
-	vm_t m = vm_create() ;
-
-	// like i am weird for doing the sizeof thingy but who cares
-	memcpy(m.mem, a.value, a.len * sizeof(uint8_t)) ; 
-
-	printf("\n+---------------------------------------+\n") ;
-	disassemble(&m) ;
-
-	while(getc(stdin) != EOF)
-	{
-		printf("\033[2J");
-		printf("\033[0;0H") ;
-		vm_step(&m) ;
-		vm_log(&m) ;
-	}
-	vm_delete(&m) ;
-
 	node_delete(n) ;
 	lexer_delete(&l) ;
-	asm_delete(&a) ;
+#endif
+	vm_t v = vm_create() ;
+
+	v.mem[0] = VM_LDI ;
+	v.mem[1] = REG_A ;
+	v.mem[2] = 3 ;
+	v.mem[3] = 0 ;
+	v.mem[4] = VM_LDI ;
+	v.mem[5] = REG_B ;
+	v.mem[6] = 2 ;
+	v.mem[7] = 0 ;
+	v.mem[8] = VM_JMP ;
+	v.mem[9] = 32 ;
+	v.mem[10] = 0 ;
+
+	v.mem[32] = VM_ADD ;
+	v.mem[33] = (REG_A) | (REG_B << 4) ;
+	v.mem[34] = VM_ADDI ;
+	v.mem[35] = REG_B ;
+	v.mem[36] = 4 ;
+	v.mem[37] = 0 ;
+	v.mem[38] = VM_LOG ;
+	v.mem[39] = VM_HALT ;
+
+	vm_exec(&v) ;
+	vm_delete(&v) ;
 }

@@ -3,75 +3,84 @@
 
 #include <stdint.h>
 
-#define MEMCAP (1024)
+#define MEMCAP (1 << 16)
 
 enum
 {
-	IC_ADD,
-	IC_SUB,
-	IC_MUL,
-	IC_DIV,
-	IC_MOD,
-	IC_EQ,
-	IC_ERROR
+	REG_A,	// accumulator
+	REG_B,	// base register
+	REG_C,	// count register
+	REG_I,	// index register
+
+	REG_T,  // temporary register
+
+	REG_SI,	// source index
+	REG_DI,	// destination index
+
+	REG_BP,	// base pointer
+	REG_RP, // retern pointer
+	REG_SP,	// stack pointer
+	REG_IP, // instruction poniter
+
+	REG_COUNT   // number of register
 } ;
 
 enum
 {
-	VM_LDA, // loads immidiate number or direct number to A
-	VM_LDX,
-	VM_LDY,
-	
-	VM_STA, // store value of A to mem
-	VM_STX,
-	VM_STY,
-	
-	VM_TAX, // transfer A to X
-	VM_TAY,
-	VM_TAS,
-	VM_TAI,
-	VM_TXA,
-	VM_TYA,
-	VM_TSA,
-	VM_TIA,
-
-	VM_ADD, // add x, y to a
-	VM_SUB,
-	VM_SHL,
-	VM_SHR,
-	
-	VM_CMP, // compare x to y then set the status
-	VM_JMP, // jump to location
-	VM_JLT, // jump less than
-	VM_JGT, // jump greater than
-	VM_JEQ, // jump if equals
-	VM_JZE, // jumps if zero
-	
-	VM_JSR, // jump subroutine
-	VM_RET, // returns from subroutine
-	
-	VM_PUSH, // pushes number onto stack
-	VM_POP, // pops off the stack and then put into register
-	VM_INT, // interupt fun ig ;-)
-	VM_HALT // stops the machine
+	FLAG_LT, // less than
+	FLAG_GT, // greater than
+	FLAG_EQ, // equal 
+	FLAG_ZE, // zero
+	FLAG_IN,  // interupt
+	FLAG_COUNT
 } ;
 
 typedef struct
 {
-	uint32_t A ; // Accumulator
-	uint32_t X ; // X index register
-	uint32_t Y ; // Y index register
-
-	uint32_t SP ; // stack pointer
-	uint32_t IP ; // instruction pointer
-	uint8_t PS ; // processor status [ LT | GT | EQ | ZE ]
-
-	uint8_t *mem ; 
+	uint32_t R[REG_COUNT] ;
+	uint8_t F[FLAG_COUNT]; 
+	uint8_t *mem ;
 } vm_t ;
+
+enum
+{
+	VM_NOP, VM_HALT, 
+	VM_ADD, VM_ADDI,
+	VM_SUB, VM_SUBI,
+	VM_AND, VM_ANDI,
+	VM_NOT, VM_NOTI,
+	VM_SHL, VM_SHLI,
+	VM_SHR, VM_SHRI,
+
+	VM_CMP, VM_CMPI,
+
+	VM_JMP, VM_JLT,
+	VM_JGT, VM_JLE,
+	VM_JGE, VM_JZE,
+	VM_JEQ, VM_JNE,
+	VM_JNZ, VM_JSR,
+	VM_JRE, VM_JAR,
+
+	VM_LDR, // register with other register
+	VM_LDI, // register with immiditae
+
+	VM_LDDI, // register with memory
+	VM_LDDR,
+	VM_LDII,
+	VM_LDIR,
+
+	VM_STDI, // memory with other register
+	VM_STDR,
+	VM_STII,
+	VM_STIR,
+
+	VM_LOG, VM_INT
+} ;
 
 vm_t vm_create(void) ;
 void vm_step(vm_t *v) ;
 void vm_log(vm_t *v) ;
+void vm_exec(vm_t *v) ;
 void vm_delete(vm_t *v) ;
 
 #endif

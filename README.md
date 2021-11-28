@@ -13,17 +13,54 @@ list to show execution cycles.
 
 ("+" -> add)
 ("-" -> sub)
-("*" -> mul)
+("\*" -> mul)
 ("/" -> div)
 ("%" -> div)
 
-if  -> conditional statemetn -> (if (cond)
-				(cond_true_statement)
-				(cond_false_statement))
+## Opcodes for the virtual machine
 
-rep -> repitative statement -> (rep (cond) (statement)) 	# probably gettting discarded
+NOP, HALT, INT,
 
-def -> define value as symbolic link -> (define sym val) 
+ADD : A = X + Y,
+AND : A = X & Y,
+NOT : A = ~X,
+SHL : A = X << Y,
+SHR : A = X >> Y,
+ROL : A = rotleft(X),
+ROR : A = rotright(X),
 
-fn  -> declare a function which would have its own whole program   -> (fn (args) ...)
-       like system. oof thats gonna be hard ;-) i freaking like it
+CMP : compare X and Y,
+(JMP, JE, JNE, JG, JGE, JL, JLE, JZ) : to I,
+
+LDR -- imm (5)
+    -- mem (5)
+    -- reg (1)
+
+STR -- imm (5)
+    -- mem (5)
+    -- reg (1)
+    -- ind (5),
+
+LDM -- imm (5)
+    -- mem (5)
+    -- reg (1)
+    -- ind (5),
+
+STM -- imm (5)
+    -- mem (5)
+    -- reg (1)
+    -- ind (5),
+
+LEA I -- mem (5)
+    I -- off (1)
+    I -- reg (1),
+
+PUSH,
+POP,
+
+TAS,
+TSA,
+TXA,
+TAX,
+TAI,
+TIA
