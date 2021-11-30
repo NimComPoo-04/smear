@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "lexer.h"
 #include "vm.h"
+#include "compiler.h"
 
 int main(void)
 {
@@ -24,6 +25,7 @@ int main(void)
 	node_delete(n) ;
 	lexer_delete(&l) ;
 #endif
+#if 0
 	vm_t v = vm_create() ;
 
 	v.mem[0] = VM_LDI ;
@@ -48,5 +50,15 @@ int main(void)
 	v.mem[39] = VM_HALT ;
 
 	vm_exec(&v) ;
+	vm_delete(&v) ;
+#endif
+	vm_t v = vm_create() ;
+	compiler_t c = compiler_create(NULL) ;
+
+	compiler_exec(&c);
+	memcpy(v.mem, c.bin, c.len) ;
+	vm_exec(&v) ;
+	
+	compiler_delete(&c) ;
 	vm_delete(&v) ;
 }
