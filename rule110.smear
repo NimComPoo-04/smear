@@ -1,0 +1,48 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                    ;;
+;;  RULE 110 to prove that SMEAR is turing complete   ;;
+;;  or in otherwords better than java (just kidding)  ;;
+;;                                                    ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(let r110 (fn (a b c)
+              (if (& (= a 1) (= b 1) (= c 1)) 0
+              (if (& (= a 1) (= b 1) (= c 0)) 1
+              (if (& (= a 1) (= b 0) (= c 1)) 1
+              (if (& (= a 1) (= b 0) (= c 0)) 0
+              (if (& (= a 0) (= b 1) (= c 1)) 1
+              (if (& (= a 1) (= b 1) (= c 0)) 1
+              (if (& (= a 0) (= b 0) (= c 1)) 1
+	      (if (& (= a 0) (= b 0) (= c 0)) 0 0))))))))))
+
+(let r 51)
+(let buff '(0 1 0 1 1 0 1 1 1 0 1 1 1 1 0 0 1 1 0 1 1 1 0 0 1 0 1 1 0 1 1 0 1 1 1 0 1 1 0 1 0 1 0 1 1 0 1 1 0 1 1))
+
+(let prnt_buff (fn (a)
+		   (if (= #(buff a) 1)
+		       (io.write "#")
+		       (io.write " "))
+		   (if (= a 0)
+		       0
+		       (prnt_buff (- a 1)))))
+
+(prnt_buff r)
+(print)
+
+(let dostuff (fn (ss)
+		 (let cp '())
+		 (let next_iter (fn (x)
+		 		   (let #(cp x) (r110 #(buff (- x 1)) #(buff x) #(buff (+ x 1))))
+		 		   (if (= x (- r 1))
+		 		       cp
+		 		       (next_iter (+ x 1)))))
+
+		 (let buff (next_iter 1))
+		 (prnt_buff r)
+		 (print)
+
+		 (if (= ss 0)
+		     0
+		     (dostuff (- ss 1)))))
+
+(dostuff 35)

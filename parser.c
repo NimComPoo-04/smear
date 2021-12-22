@@ -12,11 +12,31 @@ node_t *parse(lexer_t *l)
 	{
 		if(e.type == TOKEN_LPAREN)
 			node_attach_child(n, parse_list(l)) ;
+		else if(e.type == TOKEN_HASH || e.type == TOKEN_QUOTE)
+			node_attach_child(n, parse_one_ele_list(l, e.type)) ;
 		else
 			node_attach_child(n, node_create(e)) ;
 
 		e = lexer_advance(l) ;
 	}
+
+	return n ;
+}
+
+
+node_t *parse_one_ele_list(lexer_t *l, int t)
+{
+	element_t e = lexer_advance(l) ;
+
+	element_t f = {t, (t == TOKEN_QUOTE ? "QUOTE":"HASH"), (t == TOKEN_QUOTE ? 5 : 4)} ;
+	node_t *n = node_create(f) ;
+
+	if(e.type == TOKEN_LPAREN)
+		node_attach_child(n, parse_list(l)) ;
+	else if(e.type == TOKEN_HASH || e.type == TOKEN_QUOTE)
+		node_attach_child(n, parse_one_ele_list(l, e.type)) ;
+	else
+		node_attach_child(n, node_create(e)) ;
 
 	return n ;
 }
@@ -31,6 +51,8 @@ node_t *parse_list(lexer_t *l)
 	while(e.type != TOKEN_EOF)
 	{
 		if(e.type == TOKEN_LPAREN) node_attach_child(n, parse_list(l)) ;
+		else if(e.type == TOKEN_HASH || e.type == TOKEN_QUOTE)
+			node_attach_child(n, parse_one_ele_list(l, e.type)) ;
 		else if(e.type == TOKEN_RPAREN) return n ;
 		else node_attach_child(n, node_create(e)) ;
 

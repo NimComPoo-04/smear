@@ -26,6 +26,8 @@ lexer_t lexer_create(const char *buffer)
 			case '\t':
 			case '\n': continue ;
 
+			case ';': while(buffer[i++] != '\n') ; i--; continue;
+
 			case '(': e.type = TOKEN_LPAREN; e.len = 1 ; break ;
 			case ')': e.type = TOKEN_RPAREN; e.len = 1 ; break ;
 			case '\'':e.type = TOKEN_QUOTE ; e.len = 1 ; break ;

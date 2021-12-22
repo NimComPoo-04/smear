@@ -1,0 +1,29 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                  ;;
+;;  2 simple series that exist                      ;;
+;;  there is no stdlib just the lua stdlib          ;;
+;;  might change when i release my virtual machine  ;;
+;;                                                  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(let fibo (fn (a b c)
+              (print a)
+	      (if (= c 0)
+	          a
+		  (fibo (+ a b) a (- c 1)))))
+
+(let n3p1 (fn (a)
+              (print a)
+	      (if (= a 1)
+	          a
+		  (if (= (% a 2) 0)
+		      (n3p1 (/ a 2))
+		      (n3p1 (+ (* a 3) 1))))))
+
+(print "Enter a number: ")
+(let x (io.read "*n"))
+
+(print)
+(fibo 1 0 x)
+(print)
+(n3p1 x)

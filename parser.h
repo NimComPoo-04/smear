@@ -19,6 +19,7 @@ void node_delete(node_t *n) ;
 
 node_t *parse(lexer_t *l) ;
 node_t *parse_list(lexer_t *l) ;
+node_t *parse_one_ele_list(lexer_t *l, int t) ;
 
 void parser_debug_prnt(node_t *n, int x) ;
 

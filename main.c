@@ -1,15 +1,45 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "parser.h"
+
+#include <unistd.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+
 #include "lexer.h"
-#include "vm.h"
+#include "parser.h"
 #include "compiler.h"
 
-int main(void)
+int main(int argv, char **args)
 {
+	if(argv < 2) 
+	{
+		fprintf(stderr, "ERROR: INPUT THE NAME OF THE SOURCE FILE\n") ;
+		return 1 ;
+	}
 #if 0
-	char prog[] = "(rep (+ 1) (+ 3 4))" ;
+	// TODO: fix this person he is broken beyond repair
+	// TBH what happed is something is getting at the end and idk what to do
+
+	FILE *f = fopen(args[1], "r") ;
+	if(f == NULL)
+	{
+		fprintf(stderr, "ERROR: THE FILE DOES NOT EXISTS\n") ;
+		return 1 ;
+	}
+
+	fseek(f, 0, SEEK_END) ;
+	int num = ftell(f) ;
+	fseek(f, 0, SEEK_SET) ;
+	char *prog = calloc(num, sizeof(char));
+	fread(prog, sizeof(char), num, f) ;
+#endif
+#if 1
+	int f = open(args[1], O_RDONLY, 0) ;
+	char *prog = mmap(0, 1, PROT_READ, MAP_SHARED, f, 0) ;
+#endif
+
+	FILE *fw = fopen("a.lua", "w+") ;
 
 	printf("+---------------------------------------+\n") ;
 	printf("%s\n", prog) ;
@@ -21,44 +51,15 @@ int main(void)
 	printf("\n+---------------------------------------+\n") ;
 	node_t *n = parse(&l) ;
 	parser_debug_prnt(n, 0) ;
+	printf("\n+---------------------------------------+\n") ;
+	compile(n, fw) ;
 
 	node_delete(n) ;
 	lexer_delete(&l) ;
-#endif
-#if 0
-	vm_t v = vm_create() ;
 
-	v.mem[0] = VM_LDI ;
-	v.mem[1] = REG_A ;
-	v.mem[2] = 3 ;
-	v.mem[3] = 0 ;
-	v.mem[4] = VM_LDI ;
-	v.mem[5] = REG_B ;
-	v.mem[6] = 2 ;
-	v.mem[7] = 0 ;
-	v.mem[8] = VM_JMP ;
-	v.mem[9] = 32 ;
-	v.mem[10] = 0 ;
-
-	v.mem[32] = VM_ADD ;
-	v.mem[33] = (REG_A) | (REG_B << 4) ;
-	v.mem[34] = VM_ADDI ;
-	v.mem[35] = REG_B ;
-	v.mem[36] = 4 ;
-	v.mem[37] = 0 ;
-	v.mem[38] = VM_LOG ;
-	v.mem[39] = VM_HALT ;
-
-	vm_exec(&v) ;
-	vm_delete(&v) ;
-#endif
-	vm_t v = vm_create() ;
-	compiler_t c = compiler_create(NULL) ;
-
-	compiler_exec(&c);
-	memcpy(v.mem, c.bin, c.len) ;
-	vm_exec(&v) ;
-	
-	compiler_delete(&c) ;
-	vm_delete(&v) ;
+	//free(prog) ;
+	fclose(fw) ;
+	//fclose(f) ;
+	munmap(prog, 1) ;
+	close(f) ; 
 }
