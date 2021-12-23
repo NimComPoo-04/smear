@@ -71,35 +71,39 @@ if, let, fn, rep
 ##### IF
 if behaves like normal if-conditional statements
 
-(if {condition} {true statement} {else statement})
+**(if {condition} {true statement} {else statement})**
 
 there is no 'else if' construct but it is possible to nest if statements
 
+```
 (if true
     (if true
         (print "a")
 	(print "b")) 
     (print "c"))
+```
 
 there is one caviat tho. you can not have multiple statements in a if conditional
 only a single statement
 
 ##### REP
-
 rep is a short form of repeat. it repeats a single statement as long as the condition
 is true
 
-(rep {condition} {statement})
+**(rep {condition} {statement})**
 
-same caviat goes here you can have only one statement
-
+```
+(rep (= 0 0) (print "Infinite loop!!, :D"))
+```
+same caviat goes here you can have only one statement 
 ##### LET
-
 let declares a variable. it also redefines a variable
 
-(let {variable name} {value})
+**(let {variable name} {value})**
 
+```
 (let x 10)
+```
 
 sets the variable x to 10
 
@@ -110,7 +114,9 @@ there are 3 types of values array and scaler and functions
 
 arrays are declared as
 
+```
 (let x '(10 11 12))
+```
 
 we can retrive values from array by
 
@@ -119,17 +125,34 @@ we can retrive values from array by
 arrays start at 1 not at 0
 
 ##### FN
-
 this keyword is used to declare functions.
 
-(fn ({arguments}) {statements...})
+**(fn ({arguments}) {statements...})**
+
+```
+(let fibo (fn (a b c)
+              (print a)
+              (if (= c 0)
+	          a
+		  (fibo (+ a b) a (- c 1))))
+
+(fibo 1 0 100)
+```
 
 functions can have multiple statements
 
 the functions returns the last statement's evaluated value
 
-##### Utility Functions
+##### Operators
+they behave just like functions so basically
 
+**({operator} {arguments})**
+
+```
+(print (+ 10 10 10))
+```
+
+##### Utility Functions
 currently all the stdlib functions that are available in lua are accisible in
 smear. you can directly call them.
 
@@ -138,3 +161,17 @@ smear. you can directly call them.
 io.write - can be used to write output to write output to stdout
 io.read  - can be used to read input from stdin
 print    - can be use to log output quickly
+
+##### Comments
+Comment lines start with the ';' symbol like assembly programs
+
+This symbol can be used to create comment blocks which looks
+asthetic ;-)
+
+```
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                              ;;
+;;  Comments are cool innit :D  ;;
+;;                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+```
