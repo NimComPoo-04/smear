@@ -55,3 +55,86 @@ The compilation should generate a a.lua file to run the file use this command
 ```bash
 lua a.lua
 ```
+
+## Usage
+
+Everything is done between ()
+
+so calling a function looks like ({function-name} {arguments})
+
+#### Keywords
+```
+if, let, fn, rep
++, -, /, %, *, >, <, =, &   »operators behave just like c«
+```
+
+##### IF
+if behaves like normal if-conditional statements
+
+(if {condition} {true statement} {else statement})
+
+there is no 'else if' construct but it is possible to nest if statements
+
+(if true
+    (if true
+        (print "a")
+	(print "b")) 
+    (print "c"))
+
+there is one caviat tho. you can not have multiple statements in a if conditional
+only a single statement
+
+##### REP
+
+rep is a short form of repeat. it repeats a single statement as long as the condition
+is true
+
+(rep {condition} {statement})
+
+same caviat goes here you can have only one statement
+
+##### LET
+
+let declares a variable. it also redefines a variable
+
+(let {variable name} {value})
+
+(let x 10)
+
+sets the variable x to 10
+
+variables can be redefined. everything is imutable nothing changes state so 
+the only way of changing state is to redefine the variable
+
+there are 3 types of values array and scaler and functions
+
+arrays are declared as
+
+(let x '(10 11 12))
+
+we can retrive values from array by
+
+\#(x 1) gets the first value in array
+
+arrays start at 1 not at 0
+
+##### FN
+
+this keyword is used to declare functions.
+
+(fn ({arguments}) {statements...})
+
+functions can have multiple statements
+
+the functions returns the last statement's evaluated value
+
+##### Utility Functions
+
+currently all the stdlib functions that are available in lua are accisible in
+smear. you can directly call them.
+
+[https://www.lua.org/docs.html](Lua Documentation)
+
+io.write - can be used to write output to write output to stdout
+io.read  - can be used to read input from stdin
+print    - can be use to log output quickly
