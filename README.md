@@ -32,3 +32,26 @@ yeah that is pretty much it idk what else to say.
 
 Oh yeah I almost forgot the error handling of this language eats dirt
 for dinner.
+
+## Instructions
+
+Clone the repository
+```bash
+git clone https://github.com/NimComPoo-04/smear
+```
+Compiling the compiler should not be difficult just go in the directory and run
+```bash
+make all
+```
+
+The compilation should generate a executable file called smear.
+2 programs are given as example. demo.smear, rule110.smear
+to compile them just use this comand: 
+```bash
+./smear demo.smear
+```
+
+The compilation should generate a a.lua file to run the file use this command
+```bash
+lua a.lua
+```
