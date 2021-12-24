@@ -41,7 +41,7 @@ git clone https://github.com/NimComPoo-04/smear
 ```
 Compiling the compiler should not be difficult just go in the directory and run
 ```bash
-make all
+make
 ```
 
 The compilation should generate a executable file called smear.
